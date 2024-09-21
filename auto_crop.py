@@ -53,20 +53,50 @@ def capture_background_image():
         print("背景画像の撮影に失敗しました。プログラムを終了します。")
         exit(1)
 
+import cv2
+import os
+
 def detect_product(image_path, background_image_path):
+    # 画像を読み込む
     image = cv2.imread(image_path)
     background = cv2.imread(background_image_path)
+
+    # 差分を計算する
     diff = cv2.absdiff(image, background)
+
+    # 差分画像を二値化する
     gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+    # 差分画像を保存して確認する（デバッグ用）
+    cv2.imwrite('./images/diff.jpg', diff)
+    cv2.imwrite('./images/gray_diff.jpg', gray)
+
+    # 閾値の調整（必要に応じて変更）
+    _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+
+    # 輪郭を検出
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # デバッグのために、検出した輪郭を描画して保存
+    contour_image = image.copy()
+    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
+    cv2.imwrite('./images/contours.jpg', contour_image)
+
     if contours:
-        max_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(max_contour)
-        return (x, y, w, h)
+        # 面積が大きい輪郭のみを考慮する（最小面積を指定）
+        min_contour_area = 500  # 面積の閾値（適宜調整）
+        large_contours = [c for c in contours if cv2.contourArea(c) > min_contour_area]
+        
+        if large_contours:
+            # 最大の輪郭を取得
+            max_contour = max(large_contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(max_contour)
+            return (x, y, w, h)
+        else:
+            print("No significant product detected (too small).")
+            return None
     else:
-        print("No product detected")
+        print("No product detected.")
         return None
 
 def crop_and_save(image_path, rect, output_folder):
