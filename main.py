@@ -64,7 +64,25 @@ def capture_background_image():
         print("背景画像の撮影に失敗しました。プログラムを終了します。")
         exit(1)
 
-# 商品画像の差分から商品の輪郭を検出する関数
+def preprocess_diff_image(diff_image):
+    """
+    微妙な背景のズレを除去するためにフィルタを適用し、閾値処理を行う関数
+    """
+    # ガウシアンブラーを適用してノイズを除去
+    blurred = cv2.GaussianBlur(diff_image, (5, 5), 0)
+
+    # 適応的閾値処理を行い、背景の微細な違いを削除
+    gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY, 11, 2)
+
+    # 膨張と収縮を適用して商品を強調し、背景のノイズを削除
+    kernel = np.ones((3, 3), np.uint8)
+    dilated = cv2.dilate(thresh, kernel, iterations=2)
+    eroded = cv2.erode(dilated, kernel, iterations=2)
+
+    return eroded
+
 def detect_product(image_path, background_image_path):
     # 画像を読み込む
     image = cv2.imread(image_path)
@@ -73,20 +91,19 @@ def detect_product(image_path, background_image_path):
     # 差分を計算する
     diff = cv2.absdiff(image, background)
 
-    # 差分画像を二値化する
-    gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+    # 差分画像にフィルタと閾値処理を適用
+    processed_diff = preprocess_diff_image(diff)
 
     # 輪郭を検出
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+    contours, _ = cv2.findContours(processed_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     if contours:
         # 最大の輪郭を取得
         max_contour = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(max_contour)
         return (x, y, w, h)
     else:
-        print("No product detected")
+        print("No product detected.")
         return None
 
 # トリミングと保存を行う関数

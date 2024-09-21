@@ -3,6 +3,7 @@ import subprocess
 import time
 import signal
 import cv2
+import numpy as np
 
 # 背景画像の保存パス
 background_image_path = "./images/background.jpg"
@@ -56,6 +57,32 @@ def capture_background_image():
 import cv2
 import os
 
+
+def preprocess_diff_image(diff_image):
+    """
+    微妙な背景のズレを除去するためにフィルタを適用し、閾値処理を行う関数
+    """
+    # ガウシアンブラーを適用してノイズを除去
+    blurred = cv2.GaussianBlur(diff_image, (31, 31), 0)
+
+    # 適応的閾値処理を行い、背景の微細な違いを削除
+    gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite('./images/diff.jpg', diff_image)
+    cv2.imwrite('./images/gray_diff.jpg', gray)
+
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY, 11, 2)
+    cv2.imwrite('./images/thresh.jpg', thresh)
+
+
+    # 膨張と収縮を適用して商品を強調し、背景のノイズを削除
+    kernel = np.ones((3, 3), np.uint8)
+
+    eroded = cv2.erode(thresh, kernel, iterations=2)
+    dilated = cv2.dilate(eroded, kernel, iterations=2)
+
+    return eroded
+
 def detect_product(image_path, background_image_path):
     # 画像を読み込む
     image = cv2.imread(image_path)
@@ -64,37 +91,17 @@ def detect_product(image_path, background_image_path):
     # 差分を計算する
     diff = cv2.absdiff(image, background)
 
-    # 差分画像を二値化する
-    gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    
-    # 差分画像を保存して確認する（デバッグ用）
-    cv2.imwrite('./images/diff.jpg', diff)
-    cv2.imwrite('./images/gray_diff.jpg', gray)
-
-    # 閾値の調整（必要に応じて変更）
-    _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+    # 差分画像にフィルタと閾値処理を適用
+    processed_diff = preprocess_diff_image(diff)
 
     # 輪郭を検出
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # デバッグのために、検出した輪郭を描画して保存
-    contour_image = image.copy()
-    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
-    cv2.imwrite('./images/contours.jpg', contour_image)
+    contours, _ = cv2.findContours(processed_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if contours:
-        # 面積が大きい輪郭のみを考慮する（最小面積を指定）
-        min_contour_area = 500  # 面積の閾値（適宜調整）
-        large_contours = [c for c in contours if cv2.contourArea(c) > min_contour_area]
-        
-        if large_contours:
-            # 最大の輪郭を取得
-            max_contour = max(large_contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(max_contour)
-            return (x, y, w, h)
-        else:
-            print("No significant product detected (too small).")
-            return None
+        # 最大の輪郭を取得
+        max_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(max_contour)
+        return (x, y, w, h)
     else:
         print("No product detected.")
         return None
