@@ -23,12 +23,26 @@ def kill_gvfsd_gphoto2():
             return
     print("撮影に障害となるプロセス(gvfsd-gphoto2)は見つかりませんでした。")
 
+# def take_picture(save_path):
+#     kill_gvfsd_gphoto2()
+
+#     try:
+#         subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
+#         print(f"Image saved at {save_path}")
+#         return True
+#     except subprocess.CalledProcessError as e:
+#         print(f"Failed to take picture: {e}")
+#         return False
 def take_picture(save_path):
+    """
+    gphoto2を使って画像を撮影し、指定されたパスに上書き保存する
+    """
     kill_gvfsd_gphoto2()
 
     try:
+        # 画像を強制的に指定されたパスに保存
         subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
-        print(f"Image saved at {save_path}")
+        print(f"Image saved at {save_path} (上書き保存)")
         return True
     except subprocess.CalledProcessError as e:
         print(f"Failed to take picture: {e}")
@@ -54,32 +68,24 @@ def capture_background_image():
         print("背景画像の撮影に失敗しました。プログラムを終了します。")
         exit(1)
 
-import cv2
-import os
-
-
 def preprocess_diff_image(diff_image):
     """
     微妙な背景のズレを除去するためにフィルタを適用し、閾値処理を行う関数
     """
     # ガウシアンブラーを適用してノイズを除去
-    blurred = cv2.GaussianBlur(diff_image, (31, 31), 0)
+    blurred = cv2.GaussianBlur(diff_image, (5, 5), 0)
+
+    # グレースケール化
+    gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
 
     # 適応的閾値処理を行い、背景の微細な違いを削除
-    gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
-    cv2.imwrite('./images/diff.jpg', diff_image)
-    cv2.imwrite('./images/gray_diff.jpg', gray)
-
     thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY, 11, 2)
-    cv2.imwrite('./images/thresh.jpg', thresh)
-
 
     # 膨張と収縮を適用して商品を強調し、背景のノイズを削除
-    kernel = np.ones((3, 3), np.uint8)
-
-    eroded = cv2.erode(thresh, kernel, iterations=2)
-    dilated = cv2.dilate(eroded, kernel, iterations=2)
+    kernel = np.ones((5, 5), np.uint8)  # カーネルサイズを調整
+    dilated = cv2.dilate(thresh, kernel, iterations=3)  # 膨張回数を調整
+    eroded = cv2.erode(dilated, kernel, iterations=2)
 
     return eroded
 
@@ -101,10 +107,10 @@ def detect_product(image_path, background_image_path):
         # 最大の輪郭を取得
         max_contour = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(max_contour)
-        return (x, y, w, h)
-    else:
-        print("No product detected.")
-        return None
+
+        # トリミング範囲を少し拡張
+        padding = 10  # ピクセル単位で拡張
+        x = max(x - padding, 0)
 
 def crop_and_save(image_path, rect, output_folder):
     image = cv2.imread(image_path)
