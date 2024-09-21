@@ -24,29 +24,39 @@ def kill_gvfsd_gphoto2():
     print("撮影に障害となるプロセス(gvfsd-gphoto2)は見つかりませんでした。")
 
 # def take_picture(save_path):
+#     """
+#     gphoto2を使って画像を撮影し、指定されたパスに上書き保存する
+#     """
 #     kill_gvfsd_gphoto2()
 
 #     try:
+#         # 画像を強制的に指定されたパスに保存
 #         subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
-#         print(f"Image saved at {save_path}")
+#         print(f"Image saved at {save_path} (上書き保存)")
 #         return True
 #     except subprocess.CalledProcessError as e:
 #         print(f"Failed to take picture: {e}")
 #         return False
 def take_picture(save_path):
-    """
-    gphoto2を使って画像を撮影し、指定されたパスに上書き保存する
-    """
-    kill_gvfsd_gphoto2()
-
     try:
-        # 画像を強制的に指定されたパスに保存
+        # 最初は kill_gvfsd_gphoto2 を実行せずに撮影を試みる
         subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
-        print(f"Image saved at {save_path} (上書き保存)")
+        print(f"Image saved at {save_path}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Failed to take picture: {e}")
-        return False
+        print(f"Initial attempt failed: {e}. Trying again after killing gvfsd-gphoto2.")
+        
+        # エラーが発生した場合にのみ kill_gvfsd_gphoto2 を実行
+        kill_gvfsd_gphoto2()
+        
+        try:
+            # 再度撮影を試みる
+            subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
+            print(f"Image saved at {save_path} after killing gvfsd-gphoto2")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to take picture after killing gvfsd-gphoto2: {e}")
+            return False
 
 def capture_background_image():
     input("背景画像を撮影する準備ができたらキーを押してください: ")
