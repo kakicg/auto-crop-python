@@ -2,6 +2,7 @@ import os
 import subprocess
 import time
 import signal
+import cv2
 
 # 背景画像の保存パス
 background_image_path = "./images/background.jpg"
