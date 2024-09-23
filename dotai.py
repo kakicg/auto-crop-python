@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 
 # カメラの初期化
 cap = cv2.VideoCapture(0)  # 0はデフォルトのカメラ
@@ -10,6 +11,16 @@ if not cap.isOpened():
 # 最初の2フレームを取得
 ret, frame1 = cap.read()
 ret, frame2 = cap.read()
+
+# Matplotlibのインタラクティブモードを有効にする
+plt.ion()
+
+# 画像表示用のウィンドウを作成
+fig, ax = plt.subplots()
+
+# 画像の初期表示 (RGBに変換して表示)
+frame_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
+img_display = ax.imshow(frame_rgb)
 
 while cap.isOpened():
     # 現在のフレームと前フレームの差分を取る
@@ -38,12 +49,11 @@ while cap.isOpened():
             cv2.imwrite("product_image.png", product_img)
             print("製品をキャプチャしました")
 
-    # フレームをモニターに表示
-    cv2.imshow('監視映像', frame1)
-
-    # キー入力待ち ('q' を押すと終了)
-    if cv2.waitKey(30) & 0xFF == ord('q'):
-        break
+    # フレームをRGB形式に変換してMatplotlibで表示更新
+    frame_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
+    img_display.set_data(frame_rgb)
+    plt.draw()
+    plt.pause(0.01)  # 0.01秒ごとにフレームを更新
 
     # 次のフレームに移動
     frame1 = frame2
@@ -52,6 +62,7 @@ while cap.isOpened():
     if not ret:
         break
 
-# リソースを解放
+# カメラとウィンドウを解放
 cap.release()
-cv2.destroyAllWindows()
+plt.ioff()
+plt.show()
