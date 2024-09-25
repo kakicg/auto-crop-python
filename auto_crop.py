@@ -23,20 +23,6 @@ def kill_gvfsd_gphoto2():
             return
     print("撮影に障害となるプロセス(gvfsd-gphoto2)は見つかりませんでした。")
 
-# def take_picture(save_path):
-#     """
-#     gphoto2を使って画像を撮影し、指定されたパスに上書き保存する
-#     """
-#     kill_gvfsd_gphoto2()
-
-#     try:
-#         # 画像を強制的に指定されたパスに保存
-#         subprocess.run(["gphoto2", "--capture-image-and-download", "--filename", save_path], check=True)
-#         print(f"Image saved at {save_path} (上書き保存)")
-#         return True
-#     except subprocess.CalledProcessError as e:
-#         print(f"Failed to take picture: {e}")
-#         return False
 def take_picture(save_path):
     try:
         # 最初は kill_gvfsd_gphoto2 を実行せずに撮影を試みる
@@ -114,7 +100,7 @@ def detect_product(image_path, background_image_path):
 
     if contours:
         # 最小の輪郭面積を設定して、ノイズを無視
-        min_contour_area = 500  # 500ピクセル以上の面積を持つ輪郭のみを考慮
+        min_contour_area = 100000  # 100000ピクセル以上の面積を持つ輪郭のみを考慮
         valid_contours = [c for c in contours if cv2.contourArea(c) > min_contour_area]
 
         if valid_contours:
