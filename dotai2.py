@@ -40,12 +40,12 @@ while cap.isOpened():
     _, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
 
     # 輪郭を検出
-    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # 輪郭ごとに処理
     for contour in contours:
         # ノイズを除くために最小面積を設定
-        if cv2.contourArea(contour) < 1000:
+        if cv2.contourArea(contour) < 10000:
             continue
 
         # 製品の外接矩形を取得
@@ -71,7 +71,7 @@ while cap.isOpened():
 
     # 表示を更新
     plt.draw()
-    plt.pause(0.01)  # 0.01秒ごとにフレームを更新
+    plt.pause(0.03)
 
     # 次のフレームに移動
     frame1 = frame2

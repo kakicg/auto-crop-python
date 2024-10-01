@@ -6,8 +6,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 背景画像の保存パス
-background_image_path = "./images/background.jpg"
 output_folder = "./cropped_images/"  # トリミング画像の保存フォルダ
 pixel_to_cm_ratio = 0.1  # ピクセルからcmへの変換比率（適宜調整）
 
@@ -44,26 +42,6 @@ def take_picture(save_path):
         except subprocess.CalledProcessError as e:
             print(f"Failed to take picture after killing gvfsd-gphoto2: {e}")
             return False
-
-def capture_background_image():
-    input("背景画像を撮影する準備ができたらキーを押してください: ")
-    
-    success = False
-    max_retries = 3
-    retry_count = 0
-    
-    while not success and retry_count < max_retries:
-        success = take_picture(background_image_path)
-        if not success:
-            retry_count += 1
-            print(f"撮影に失敗しました。リトライ {retry_count}/{max_retries}")
-            time.sleep(2)
-        else:
-            print("背景画像が正常に保存されました。")
-    
-    if not success:
-        print("背景画像の撮影に失敗しました。プログラムを終了します。")
-        exit(1)
 
 def preprocess_diff_image(diff_image):
     """
@@ -143,8 +121,6 @@ def estimate_product_height(rect, pixel_to_cm_ratio):
     return h * pixel_to_cm_ratio
 
 def main_loop():
-    capture_background_image()
-    print("背景画像が保存されました。これから商品撮影に入ります。")
 
     while True:
         barcode = input("商品バーコードをスキャンしてください (終了するには'q'を入力): ")
